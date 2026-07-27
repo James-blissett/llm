@@ -4,6 +4,7 @@
 import os               # Enables interfacing with operating system
 import urllib.request   # For handling urls, will be downloading 'The Verdict' short story as the dataset 
 import re               # regular expression python library
+import tiktoken         # OpenAI's BPE opensource tokeniser. TO DO: go through the implementation of this to understand BPE implementation
 
 
 # ---------------------------------------------------------------------------
@@ -67,4 +68,50 @@ class SinmpleTokenizerV1:
         text = re.sub(r'\s+([,.?!"()\'])', r'\1', text)             # cleans up odd white spaces like between hello and , 'hello , world' -> 'hello, world'
 
         return text
+
+all_tokens = sorted(list(set(preprocessed)))        # recreating list of unique tokens from token set 
+all_tokens.extend(["<|endoftext|>", "<unk>"])       # extending to end of text and unknown words -> adding tokens not already in the dataset 
+
+vocab = {token:integer for integer,token in enumerate(all_tokens)}
+
+# ---------------------------------------------------------------------------
+# A tokeniser that can handle unknown vocab
+# ---------------------------------------------------------------------------
+class SinmpleTokenizerV2:
+    def __init__(self, vocab):      # Constructor: instantiated when creating a new object. Parses vocabulary
+        self.str_to_int = vocab
+        self.int_to_str = {i:s for s,i in vocab.items()}
+
+    def encode(self, text):         # Method
+        preprocessed = re.split(r'([,.:;?_!"()\']|--|\s)', text)    # Breaks down text into tokens
+
+        preprocessed = [
+            item.strip() for item in preprocessed if item.strip()   # Strips white spaces
+        ]
+
+        preprocessed = {
+            item if item in self.str_to_int                         # return string if string not empty and in the vocab
+            else "<|unk|>" for item in preprocessed                 # else return unknown for this token -> prevents key errors
+        }
+
+        ids = [self.str_to_int[s] for s in preprocessed]            # Makes token IDs. For each string in preprocessed, assign it's ID from the pre-defined lookup list
+
+        return ids
+
+    def decode(self, ids):
+        text = " ".join([self.int_to_str[i] for i in ids])          # turns the token IDs back into words, joining them with a white space in-between
+        # Replace spaces before the specified punctuations
+        text = re.sub(r'\s+([,.?!"()\'])', r'\1', text)             # cleans up odd white spaces like between hello and , 'hello , world' -> 'hello, world'
+
+        return text
+
+# ---------------------------------------------------------------------------
+# Byte Pair Encoder, to be able to encode then decode unknown tokens without information loss. Can always break down a word into sub-tokens. Using OpenAI's tokeniser for now
+# ---------------------------------------------------------------------------
+tokeniser = tiktoken.get_encoding("gpt2")
+
+
+
+
+
 
