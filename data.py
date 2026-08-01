@@ -5,6 +5,8 @@ import os               # Enables interfacing with operating system
 import urllib.request   # For handling urls, will be downloading 'The Verdict' short story as the dataset 
 import re               # regular expression python library
 import tiktoken         # OpenAI's BPE opensource tokeniser. TO DO: go through the implementation of this to understand BPE implementation
+import torch 
+from torch.utils.data import Dataset, dataloader    # a useful, convenient way to handle large datasets efficiently
 
 
 # ---------------------------------------------------------------------------
@@ -110,8 +112,44 @@ class SinmpleTokenizerV2:
 # ---------------------------------------------------------------------------
 tokeniser = tiktoken.get_encoding("gpt2")
 
+# ---------------------------------------------------------------------------
+# Data Sampling with a sliding window | How to provide smaller chunks of tokenIDs efficiently, vs chucking them all at it at the same time
+# ---------------------------------------------------------------------------
 
+# def placeholder(self):
+#     """
+#     LLMs do token prediction autoregressively; one next-token at a time 
+    
+    
+#     """
 
+#     return 0
 
+enc_text = tokeniser.encode(raw_text)       # 5145 long - we want to instead be able to give only e.g. 4. Can't feed LLM 5145 all at once
 
+enc_sample = enc_text[50:]                  # Truncating the first 50 samples to make things easier to visualise 
 
+context_size = 4
+
+# example encoding samples. If the LLM received n:n+3 tokens, it should predict the n+4'th token
+x = enc_sample[:context_size]               # the input
+y = enc_sample[1:context_size+1]            # target (the word to predict)
+# these inputs and targets are contained in tensors with n tokens / row (here 4) 
+
+for i in range(1, context_size+1):
+    context = enc_sample[:i]
+    desired = enc_sample[i]
+
+    print(tokeniser.decode(context), "---->", tokeniser.decode([desired]))
+
+class GPTDatasetV1(Dataset):
+    # Constructor method
+    def __init__(self, txt, tonekiser, max_length, stride):
+        self.input_ids = []
+        self.target_ids = []
+
+        # Tokenise the entire text
+        token_ids = tokeniser.encode(txt, allowed_special={"<|endoftext|>"})
+
+        # Use a sliding window to chunk the book into overlapping sequences of max_length
+        
