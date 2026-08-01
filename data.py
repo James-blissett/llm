@@ -6,7 +6,7 @@ import urllib.request   # For handling urls, will be downloading 'The Verdict' s
 import re               # regular expression python library
 import tiktoken         # OpenAI's BPE opensource tokeniser. TO DO: go through the implementation of this to understand BPE implementation
 import torch 
-from torch.utils.data import Dataset, dataloader    # a useful, convenient way to handle large datasets efficiently
+from torch.utils.data import Dataset, DataLoader    # a useful, convenient way to handle large datasets efficiently
 
 
 # ---------------------------------------------------------------------------
@@ -140,11 +140,11 @@ for i in range(1, context_size+1):
     context = enc_sample[:i]
     desired = enc_sample[i]
 
-    print(tokeniser.decode(context), "---->", tokeniser.decode([desired]))
+    # print(tokeniser.decode(context), "---->", tokeniser.decode([desired]))
 
 class GPTDatasetV1(Dataset):
     # Constructor method
-    def __init__(self, txt, tonekiser, max_length, stride):
+    def __init__(self, txt, tokeniser, max_length, stride):
         self.input_ids = []
         self.target_ids = []
 
@@ -156,7 +156,7 @@ class GPTDatasetV1(Dataset):
             input_chunk = token_ids[i:i + max_length]
             target_chunk = token_ids[i + 1: i + max_length + 1]
             self.input_ids.append(torch.tensor(input_chunk))
-            self.target_ids.append(torch.tensor(self.target_chunk))
+            self.target_ids.append(torch.tensor(target_chunk))
 
     def __len__(self):
         return len(self.input_ids)
@@ -164,4 +164,33 @@ class GPTDatasetV1(Dataset):
     def __getitem__(self, idx):
         return self.input_ids[idx], self.target_ids[idx]
 
+def create_dataloader_v1(txt, batch_size = 4, max_length = 256,
+                         stride = 128, shuffle = True, drop_last = True,
+                         num_workers = 0):
     
+    # Initialise the tokeniser
+    tokeniser = tiktoken.get_encoding("gpt2")
+
+    # Create dataset
+    dataset = GPTDatasetV1(txt, tokeniser, max_length, stride)
+
+    # Create dataloader
+    dataloader = DataLoader(
+        dataset,
+        batch_size = batch_size,
+        shuffle = shuffle,
+        drop_last = drop_last,
+        num_workers = num_workers
+    )
+
+    return dataloader
+
+# Increasing the slide decreases overfitting
+dataloader = create_dataloader_v1(raw_text, 
+                                  batch_size = 8, max_length = 4,
+                                  stride = 4, shuffle = False)
+
+data_iter = iter(dataloader)
+first_batch = next(data_iter)
+print(first_batch)
+
