@@ -6,7 +6,7 @@
 
 # Attention allows selective access of the actual input tokens, not just a representation of them, which improves performance by not loosing info
 
-# There are 'importance scores/attention weights' which assign a relative importance to each input token
+# There are 'importance/attention scores/attention weights' which assign a relative importance to each input token
 
 # Question: what assigns the attention weights? How does that work?
 
@@ -48,13 +48,31 @@ attn_scores = torch.empty(inputs.shape[0])
 for i, x_i in enumerate(inputs):
     attn_scores[i] = torch.dot(x_i, input_query) # dot product (transpose not necessary here since they are 1-dim vectors)
 
-# Now have to normalise the attention scores so they sum to 1
+# Now have to normalise the attention scores so they sum to 1 - this gives us the attention weights
 # could use:
 # attn_scores_tmp = attn_scores / attn_scores.sum()
 
 # better to use softmax (just a normalisation function)
-def softmax_naive(x):
-    return torch.exp(x) / torch.exp(x).sum(dim=0)
+# def softmax_naive(x):
+#     return torch.exp(x) / torch.exp(x).sum(dim=0)
 
-print(softmax_naive(attn_scores))
+# print(softmax_naive(attn_scores))
+
+# pytorch version of softmax: this gives the attention weights alpha
+attn_weights = torch.softmax(attn_scores, dim=0)
+
+# ----------------- 
+# Now compute the context vector by applying the attention weights from the softmax to the input embedding vectors
+# context vector summarises all the input from the other tokens in the input - higher weights = more significance to the output
+# ----------------- 
+
+context_vec = torch.zeros(query.shape)
+for i,x_i in enumerate(inputs):
+    context_vec += attn_weights[i] * x_i
+
+# print(context_vec)
+
+# ----------------- 
+# Computing Attention weights for all input tokens
+# ----------------- 
 
