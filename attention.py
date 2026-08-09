@@ -28,3 +28,33 @@ inputs = torch.tensor(
      [0.05, 0.80, 0.55]]    # step    (x^6)
 )
 
+input_query = inputs[1]     # using the second 'token' journey as an example
+
+# dot is element wise multiplication then addition
+
+# python for loop
+# result = 0
+# i = 1
+
+# for idx, element in enumerate(inputs[i]):
+#     result += inputs[i][idx] * input_query[idx]
+# print(result)
+
+#pytorch dot product for loop
+query = inputs[1]               # all this is in respect to token 2
+
+attn_scores = torch.empty(inputs.shape[0])
+
+for i, x_i in enumerate(inputs):
+    attn_scores[i] = torch.dot(x_i, input_query) # dot product (transpose not necessary here since they are 1-dim vectors)
+
+# Now have to normalise the attention scores so they sum to 1
+# could use:
+# attn_scores_tmp = attn_scores / attn_scores.sum()
+
+# better to use softmax (just a normalisation function)
+def softmax_naive(x):
+    return torch.exp(x) / torch.exp(x).sum(dim=0)
+
+print(softmax_naive(attn_scores))
+
